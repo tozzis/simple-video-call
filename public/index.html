@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Call</title>
+  <style>
+    .video-container {
+      display: flex;
+    }
+    .video-container video {
+      width: 50%;
+      height: auto;
+      border: 1px solid black;
+    }
+  </style>
+</head>
+<body>
+  <h1>Video Call</h1>
+  <div class="video-container">
+    <video id="localVideo" autoplay playsinline></video>
+    <video id="remoteVideo" autoplay playsinline></video>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/simple-peer/simplepeer.min.js"></script>
+  <script>
+    const localVideo = document.getElementById('localVideo');
+    const remoteVideo = document.getElementById('remoteVideo');
+
+    const socket = io();
+
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      .then(stream => {
+        localVideo.srcObject = stream;
+        const peer = new SimplePeer({ initiator: location.hash !== '#init', trickle: false, stream });
+
+        peer.on('signal', data => {
+          // Send the signal to the other peer
+          socket.emit('signal', data);
+        });
+
+        peer.on('stream', stream => {
+          remoteVideo.srcObject = stream;
+          // Check if the stream is playing and then show the remote video
+          remoteVideo.onplaying = () => {
+            remoteVideo.style.display = 'block';
+          };
+        });
+
+        socket.on('signal', data => {
+          // Receive the signal from the other peer
+          peer.signal(data);
+        });
+      })
+      .catch(error => {
+        console.error('Error accessing media devices.', error);
+      });
+  </script>
+</body>
+</html>
